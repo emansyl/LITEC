@@ -80,7 +80,7 @@ void main(void)
 			if (!run_stop)
 			{
 				set_gains(); // function adjusting feedback gains
-				run_stop = 1: // only try to update once
+				run_stop = 1; // only try to update once
 			}
  		}
 		if (new_accels) // enough overflows for a new reading
@@ -263,7 +263,7 @@ void read_accels(void)
 		i2c_read_data(addr,0x27 | 0x80,Data,5); // reads all 5 bytes, starting at reg 0x27(status register)
 		//x-axis stored in registers 0x28 and 0x29 
 		//y-axis stored in registers 0x2A and 0x2B
-		if (Data_1[0] & 0x03)==0x03
+		if ((Data[0] & 0x03)==0x03)
 		{
 			avg_dx +=((Data[2]<<8|Data[1])>>4); 
 			avg_dy +=((Data[4]<<8]|Data[3]>>4));
