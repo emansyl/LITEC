@@ -1,4 +1,4 @@
-* Sample code for main function to read the compass and ranger */
+/* Sample code for main function to read the compass and ranger */
 #include <c8051_SDCC.h>
 #include <stdlib.h>// needed for abs function
 #include <stdio.h>
