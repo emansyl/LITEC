@@ -53,6 +53,9 @@ int dx=0;
 int dy=0;
 
 __sbit __at 0xB7 RUN;
+__sbit __at 0xB5 BILED0;
+__sbit __at 0xB6 BILED1;
+
 
 
 //-----------------------------------------------------------------------------
@@ -298,13 +301,16 @@ void set_drive_PWM()
 		BILED0 = 0;
 		BILED1 = 1;
 	}
-	if (MOTOR_PW < PW_NEUT)
+	else if (MOTOR_PW < PW_NEUT)
 	{
 		if (MOTOR_PW < PW_MIN)
 			MOTOR_PW = PW_MIN;
 		BILED0 = 1;
 		BILED1 = 0;
 	}
+	else //car is stopped, BILED off
+		BILED0 = 1;
+		BILED1 = 1;
 }
 
 //Update_Gains/Values function to be able to change gains without recompiling?
