@@ -11,7 +11,6 @@
 #define PW_LEFT 1909
 #define PW_CENTER 2769
 #define PCA_start 28614
-//hhhhh
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
 //-----------------------------------------------------------------------------
@@ -261,7 +260,7 @@ void read_accels(void)
 	int avg_dy=0;
 	while (i<9)
 	{
-		i2c_read_data(addr,0x27|0x80,Data,5); // reads all 5 bytes, starting at reg 0x27(status register)
+		i2c_read_data(addr,0x27 | 0x80,Data,5); // reads all 5 bytes, starting at reg 0x27(status register)
 		//x-axis stored in registers 0x28 and 0x29 
 		//y-axis stored in registers 0x2A and 0x2B
 		if (Data_1[0] & 0x03)==0x03
@@ -292,6 +291,20 @@ void set_drive_PWM()
 {
 	MOTOR_PW = PW_NEUT + kdy * dy;
 	MOTOR_PW += kdx * abs(dx);
+	if (MOTOR_PW > PW_NEUT)
+	{
+		if (MOTOR_PW > PW_MAX)
+			MOTOR_PW = PW_MAX;
+		BILED0 = 0;
+		BILED1 = 1;
+	}
+	if (MOTOR_PW < PW_NEUT)
+	{
+		if (MOTOR_PW < PW_MIN)
+			MOTOR_PW = PW_MIN;
+		BILED0 = 1;
+		BILED1 = 0;
+	}
 }
 
 //Update_Gains/Values function to be able to change gains without recompiling?
