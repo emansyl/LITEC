@@ -12,11 +12,6 @@
 #define PW_CENTER 2769
 #define PCA_start 28614
 
-The plan:
--Edit Initialization functions to reflect new hardware
--Go through each new function in main and write it
--Change global variables to reflect new functions
--Fill in all blanks in PCA_ISR
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
 //-----------------------------------------------------------------------------
