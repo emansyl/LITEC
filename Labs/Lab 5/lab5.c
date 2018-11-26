@@ -1,4 +1,4 @@
-/* Sample code for main function to read the compass and ranger */
+* Sample code for main function to read the compass and ranger */
 #include <c8051_SDCC.h>
 #include <stdlib.h>// needed for abs function
 #include <stdio.h>
@@ -27,48 +27,36 @@ void SMB_Init(void);
 void ADC_Init(void);
 void Interrupt_Init(void);
 void PCA_ISR(void) __interrupt 9;
+void Accel_Init_C(void);
+
 unsigned char read_AD_input(unsigned char pin_number);
-//int read_compass(void);
-//void set_servo_PWM(void);
-//void read_light(void); // new feature - read light value from ranger
-
-//int read_ranger(void); // new feature - read value, and then start a new ping
-//void pick_heading(void); // function which allow operator to pick desired heading
-//void pick_range(void);
-//void forward_mode(void); // new feature - adjust steering/speed control for forward mode
-//void set_speed_adj(void);
-//void reverse_mode(void); // new feature - adjust steering/speed control for reverse mode
-//void print(void);
-
-void read_accel (void); //Sets global variables gx & gy
+void set_gains(void); // function which allow operator to set feedback gains
+void read_accels(void); //Sets global variables dx & dy
 void set_servo_PWM (void);
 void set_drive_PWM(void);
 void updateLCD(void);
-void set_gains(void); // function which allow operator to set feedback gains
 
 //define global variables
-unsigned int PW_Init;
 unsigned int MOTOR_PW;
 
 unsigned int SERVO_PW = 0; //Servo from Lab 3-3
 
 unsigned char AD;
 //Boolean to check if currently in forward or reverse, 0 = forward, 1 = reverse
-unsigned char addr = 0xE0;
-unsigned char Data[3]; //Data array read and written on for SMBus
 unsigned int Counts; //normal counter for time
-unsigned int heading_gain;
-unsigned int speed_gain;
+unsigned int kds; //Heading gain
+unsigned int kdx;
+unsigned int kdy;
 unsigned char reverse;
 
-unsigned char new_accel = 0; // flag for count of accel timing
+unsigned char new_accels = 0; // flag for count of accels timing
 unsigned char new_lcd = 0; // flag for count of LCD timing
 unsigned int range;
 unsigned char a_count; // overflow count for acceleration
 unsigned char lcd_count; // overflow count for LCD updates
 
-int gx=0;
-int gy=0;
+int dx=0;
+int dy=0;
 
 __sbit __at 0xB7 RUN;
 
@@ -87,7 +75,6 @@ void main(void)
 	SMB_Init();
 	ADC_Init();
 	Interrupt_Init();
-	ADC_Init();
 	Accel_Init_C();
 	a_count = 0;
 	lcd_count = 0;
@@ -102,12 +89,12 @@ void main(void)
 				run_stop = 1: // only try to update once
 			}
  		}
-		if (new_accel) // enough overflows for a new reading
+		if (new_accels) // enough overflows for a new reading
 		{
 			read_accels();
 			set_servo_PWM(); // set the servo PWM
 			set_drive_PWM(); // set drive PWM
-			new_accel = 0;
+			new_accels = 0;
 			a_count = 0;
 		}
 		if (new_lcd) // enough overflow to write to LCD
@@ -219,13 +206,13 @@ void PCA_ISR(void) __interrupt 9
 		CF = 0; // clear overflow indicator
 		a_count++;
 		//Use guess and check values between 1 and 20 to fill in the blanks
-		if (a_count>=____)
+		if (a_count>= 1)
 		{
-			new_accel=1;
+			new_accels=1;
 			a_count = 0;
 		}
 		lcd_count++;
-		if (lcd_count>=____)
+		if (lcd_count>= 20)
 		{
 			new_lcd = 1;
 			lcd_count = 0;
@@ -257,30 +244,26 @@ unsigned char read_AD_input(unsigned char pin_number)
 void set_gains()
 {
 	lcd_clear();
-	lcd_print("Enter desired heading:");
-	desired_heading = kpd_input(1);	
+	lcd_print("Enter a kds value (1 - 10) into the keypad:");
+	kds = kpd_input(1);
 	lcd_clear();
-	lcd_print("Enter desired range:");
-	desired_range = kpd_input(1);	
+	lcd_print("Enter a kdx value (1 - 50) into the keypad:");
+	kdx = kpd_input(1);
 	lcd_clear();
-	lcd_print("Enter a Kps value (1 - 10) into the keypad:");
-	heading_gain = kpd_input(1);
+	lcd_print("Enter a kdy value (1 - 50) into the keypad:");
+	kdy = kpd_input(1);
 	lcd_clear();
-	lcd_print("Enter a Kpr value (1 - 50) into the keypad:");
-	speed_gain = kpd_input(1);
-	lcd_clear();
-	lcd_print("Values: %d, %d, %d, %d", desired_heading, desired_range,
-	heading_gain, speed_gain);
+	lcd_print("Values: %d, %d, %d", kds, kdx, kdy);
 }
 
 void read_accels(void)
 {
 	char i=0;
-	unsigned char addr = 0x3A; // the address of the Accelator, 0xC0 for the compass
+	unsigned char addr = 0x3A; // the address of the Accelerometer, 0xC0 for the compass
 	unsigned char Data[5];      // Data is an array with a length of 5
 
-	int avg_gx=0;
-	int avg_gy=0;
+	int avg_dx=0;
+	int avg_dy=0;
 	while (i<9)
 	{
 		i2c_read_data(addr,0x27|0x80,Data,5); // reads all 5 bytes, starting at reg 0x27(status register)
@@ -288,30 +271,32 @@ void read_accels(void)
 		//y-axis stored in registers 0x2A and 0x2B
 		if (Data_1[0] & 0x03)==0x03
 		{
-			avg_gx +=((Data[2]<<8|Data[1])>>4); 
-			avg_gy +=((Data[4]<<8]|Data[3]>>4));
+			avg_dx +=((Data[2]<<8|Data[1])>>4); 
+			avg_dy +=((Data[4]<<8]|Data[3]>>4));
 			i++;
 		}
 	}
-	avg_gx=avg_gx>>3;
-	avg_gy=avg_gy>>3;
-	gx=avg_gx;
-	gy=avg_gy;
+	avg_dx=avg_dx>>3;
+	avg_dy=avg_dy>>3;
+	dx=avg_dx;
+	dy=avg_dy;
 }
 
-void set_servo_PWM(void)
+void set_servo_PWM()
 {
 	int PW=0;
-	PW=PW_CENTER-(heading_gain*gx)
-
+	PW=PW_CENTER-(kds*dx)
 	if (PW>PW_RIGHT) 
 		PW=PW_RIGHT;
 	if (PW<PW_LEFT)
 		PW=PW_LEFT;
-
 	SERVO_PW=PW;
-	//printf("Servo PW: %d \r\n",PW);
-	//printf("SERVO_PW: %u\n", SERVO_PW);
+}
+
+void set_drive_PWM()
+{
+	MOTOR_PW = PW_NEUT + kdy * dy;
+	MOTOR_PW += kdx * abs(dx);
 }
 
 //Update_Gains/Values function to be able to change gains without recompiling?
@@ -321,7 +306,7 @@ void set_servo_PWM(void)
 void updateLCD()
 {
 	lcd_clear();
-	//lcd_print("H: %d, D: %d", heading, range);
+	lcd_print("dx: %d, dy: %d \n kds: %d, kdx: %d, kdy: %d", dx, dy, kds, kdx, kdy);
 }
 
 //Gain steps:
