@@ -1,4 +1,4 @@
-* Sample code for main function to read the compass and ranger */
+/* Sample code for main function to read the compass and ranger */
 #include <c8051_SDCC.h>
 #include <stdlib.h>// needed for abs function
 #include <stdio.h>
@@ -11,7 +11,7 @@
 #define PW_LEFT 1909
 #define PW_CENTER 2769
 #define PCA_start 28614
-
+//hhhhh
 //-----------------------------------------------------------------------------
 // 8051 Initialization Functions
 //-----------------------------------------------------------------------------
