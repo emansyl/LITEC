@@ -12,9 +12,9 @@ to user interface.
 #include <stdio.h>
 #include <i2c.h>
 
-#define PW_NEUT 2769 //Motor PW from Lab 3-3
-#define PW_MIN 2030
-#define PW_MAX 3507
+#define PW_NEUT 2765 //Motor PW from Lab 3-3
+#define PW_MIN 2028
+#define PW_MAX 3502
 #define PW_RIGHT 3329 //Steering PW from Lab 3-3
 #define PW_LEFT 1909
 #define PW_CENTER 2769
@@ -104,11 +104,11 @@ void main(void)
 		while (!RUN)
 		{ 
 		//Continuously read A/D value to set forward speed until switch is in run position
-			AD = read_AD_input(6);
-			PW_Init = AD*2.89;
+			//AD = read_AD_input(6);
+			//PW_Init = AD*2.89;
 			if (!run_stop)
 			{
-				pick_range();
+				//pick_range();
 				pick_heading();
 				lcd_clear();
 				lcd_print("Desired range: %d, Kpr: %d, Desired heading: %d, Kps: %d\r\n",
@@ -121,9 +121,10 @@ void main(void)
 			//printf("compass \r\n");
 			heading = read_compass();
 			new_heading = 0;
-			set_servo_PWM(); // if new data, adjust servo PWM for compass & ranger
+			printf("Heading: %d,Motor PW: %d \r\n",heading,SERVO_PW);
+			//set_servo_PWM(); // if new data, adjust servo PWM for compass & ranger
 		}
-		if (new_range) // enough overflow for a new range
+		/*if (new_range) // enough overflow for a new range
 		{
 			range = read_ranger(); // get range, also stores light value into light
 			// read_ranger() must start a new ping after a read
@@ -146,11 +147,16 @@ void main(void)
 			}
 			//printf("MOTOR_PW: %d\r\n", MOTOR_PW);
 			new_range = 0;
-		}
+		}*/
 		PCA0CPL0 = 0xFFFF - SERVO_PW;
-		PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
-		PCA0CPL2 = 0xFFFF - MOTOR_PW;
-		PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
+		PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for rudder fan
+		/*PCA0CPL1 = 0xFFFF - MOTOR_PW;
+		PCA0CPH1 = (0xFFFF - MOTOR_PW) >> 8;//Set servo pw for thrust angle
+		PCA0CPL2 = 0xFFFF - SERVO_PW;
+		PCA0CPH2 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for left thrsut power fan
+		PCA0CPL3 = 0xFFFF - MOTOR_PW;
+		PCA0CPH3 = (0xFFFF - MOTOR_PW) >> 8;//Set motor pw for right thrust power fan
+		*/
 		print();
 	}
 }
@@ -162,16 +168,17 @@ void main(void)
 //
 void Port_Init()
 {
-	//Set output pin for both CEX0 and CEX2
-	P1MDOUT |= 0x04; //set output pin (Pin 0) for CEX2 in push-pull mode
-	P3MDOUT &= ~0x80;	//Set pin 3.5 I/O for SS
-	P3 |= 0x80;
+	//Set output pin for both CEX0,CEX1,CEX2 and CEX3
+	P1MDOUT |= 0xF0; //set output pin (Pin 4,5,6,7) for CEX0-CEX3 in push-pull mode
+
+	//P3MDOUT &= ~0x80;	//Set pin 3.5 I/O for SS
+	//P3 |= 0x80;
 
 	
 	 //Analog input & output
-	P1MDIN &= ~0x40; //Set pin 6 of Port 1 for analog input
-	P1MDOUT &= ~0x40; //Set pin 6 of Port 1 as "open drain"
-	P1 |= 0x40; //Send logic 1 to pin 6 of Port 1
+	//P1MDIN &= ~0x40; //Set pin 6 of Port 1 for analog input
+	//P1MDOUT &= ~0x40; //Set pin 6 of Port 1 as "open drain"
+	//P1 |= 0x40; //Send logic 1 to pin 6 of Port 1
 }
 //-----------------------------------------------------------------------------
 // Interrupt_Init
@@ -193,7 +200,7 @@ void Interrupt_Init()
 //
 void XBR0_Init()
 {
-	XBR0 = 0x27;
+	XBR0 = 0x25;
 }
 //-----------------------------------------------------------------------------
 // PCA_Init
@@ -207,9 +214,11 @@ void PCA_Init(void)
 	//the PCA (Programmable Counter Array, p. 50 in Lab Manual.
 	// Use a 16 bit counter with SYSCLK/12.
 	PCA0MD = 0x81; //Enable CF interrupt for SYSCLK/12
-	PCA0CPM0 = 0xC2;
+	PCA0CPM0 = 0xC2; // 16 bit, enable compare for CCM0/CEX0, enable PWM 
+	PCA0CPM1 = 0xC2; // 16 bit, enable compare for CCM1/CEX1, enable PWM
 	PCA0CPM2 = 0xC2; // 16 bit, enable compare for CCM2/CEX2, enable PWM
-	PCA0CPM3 = 0xC2;
+	PCA0CPM3 = 0xC2; // 16 bit, enable compare for CCM3/CEX3, enable PWM
+
 	PCA0CN = 0x40; //Enable PCA counter
 }
 //-----------------------------------------------------------------------------
@@ -309,6 +318,51 @@ int read_ranger(void)
 	return range;
 }
 
+void pick_heading(void)
+{
+	lcd_clear();
+	lcd_print("Enter desired heading:");
+	desired_heading = kpd_input(1);	
+	lcd_clear();
+	lcd_print("Enter a Kps value (1 - 5) into the keypad:");
+	gain_heading = kpd_input(1);
+}
+
+void pick_range(void)
+{	
+	lcd_clear();
+	lcd_print("Enter a desired obstacle threshold:");
+	desired_range = kpd_input(1);
+	lcd_clear();
+	lcd_print("Enter a Kpr value (1 - 50) into the keypad:");
+	gain_speed = kpd_input(1);
+}
+//Set steering via tail fan
+void set_tail_PWM(void)
+
+{
+	int kp=12;
+	int kd=70;
+	int previous_error;
+	int error=0;
+	int TailPWM=0;
+	error=desired_heading - heading;
+
+	if (error > 1800 )
+		error =  error - 3600;
+	else if (error < -1800)
+		error = error + 3600;
+
+	TailPWM = (signed long)PW_NEUT+(signed long)kp*(signed long)error+
+	(signed long)kd*(signed long)(error-previous_error);
+
+	printf("Tail PWM: %d \r\n",TailPWM);
+
+	previous_error=error;
+
+	SERVO_PW=TailPWM;
+}
+
 void set_servo_PWM(void)
 {
 	int error=0;
@@ -333,27 +387,8 @@ void set_servo_PWM(void)
 	//printf("Servo PW: %d \r\n",PW);
 	//printf("SERVO_PW: %u\n", SERVO_PW);
 }
-
 //Set error
-void pick_heading(void)
-{
-	lcd_clear();
-	lcd_print("Enter desired heading:");
-	desired_heading = kpd_input(1);	
-	lcd_clear();
-	lcd_print("Enter a Kps value (1 - 5) into the keypad:");
-	gain_heading = kpd_input(1);
-}
 
-void pick_range(void)
-{	
-	lcd_clear();
-	lcd_print("Enter a desired obstacle threshold:");
-	desired_range = kpd_input(1);
-	lcd_clear();
-	lcd_print("Enter a Kpr value (1 - 50) into the keypad:");
-	gain_speed = kpd_input(1);
-}
 void forward_mode()
 {
 	//Continuously read the A/D value of Port 1, Pin 6
