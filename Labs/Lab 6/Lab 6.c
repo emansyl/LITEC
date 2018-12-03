@@ -15,6 +15,8 @@ to user interface.
 #define PW_NEUT 2765 //Motor PW from Lab 3-3
 #define PW_MIN 2028
 #define PW_MAX 3502
+
+//Not used
 #define PW_RIGHT 3329 //Steering PW from Lab 3-3
 #define PW_LEFT 1909
 #define PW_CENTER 2769
@@ -359,7 +361,10 @@ void set_tail_PWM(void)
 	printf("Tail PWM: %d \r\n",TailPWM);
 
 	previous_error=error;
-
+	if (TailPW>PW_MAX) 
+		TailPW=PW_MAX;
+	if (TailPW<PW_MIN)
+		TailPW=PW_MIN;
 	SERVO_PW=TailPWM;
 }
 
