@@ -42,6 +42,7 @@ void forward_mode(void); // new feature - adjust steering/speed control for forw
 void set_speed_adj(void);
 void reverse_mode(void); // new feature - adjust steering/speed control for reverse mode
 void print(void);
+void set_tail_PWM(void);
 //define global variables
 unsigned int PW_Init; //Initial pulsewidth set by pot value, add tp PW_NEUT for forward speed
 unsigned int MOTOR_PW;
@@ -73,6 +74,8 @@ unsigned int gain_heading; //kps, controls how fast the car turns
 unsigned int gain_speed; //kpr, controls how fast the car slows down
 unsigned char reverse; //Boolean to determine if car is in reverse, used to flip steering
 unsigned char run_stop; //Boolean to allow one data initialization
+
+int previous_error = 0;
 
 __sbit __at 0xB7 RUN;
 
@@ -123,6 +126,7 @@ void main(void)
 			//printf("compass \r\n");
 			heading = read_compass();
 			new_heading = 0;
+			set_tail_PWM();
 			printf("Heading: %d,Motor PW: %d \r\n",heading,SERVO_PW);
 			//set_servo_PWM(); // if new data, adjust servo PWM for compass & ranger
 		}
@@ -345,10 +349,10 @@ void set_tail_PWM(void)
 {
 	int kp=12;
 	int kd=70;
-	int previous_error;
 	int error=0;
 	int TailPWM=0;
-	error=desired_heading - heading;
+	desired_heading = 135;
+	error = desired_heading - heading;
 
 	if (error > 1800 )
 		error =  error - 3600;
