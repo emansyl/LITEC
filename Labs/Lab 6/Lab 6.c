@@ -114,7 +114,7 @@ void main(void)
 			if (!run_stop)
 			{
 				//pick_range();
-				pick_heading();
+				//pick_heading();
 				lcd_clear();
 				lcd_print("Desired range: %d, Kpr: %d, Desired heading: %d, Kps: %d\r\n",
 				 desired_range, gain_speed, desired_heading, gain_heading);
@@ -127,7 +127,7 @@ void main(void)
 			heading = read_compass();
 			new_heading = 0;
 			set_tail_PWM();
-			printf("Heading: %d,Motor PW: %d \r\n",heading,SERVO_PW);
+			//printf("Heading: %d,Motor PW: %d \r\n",heading,SERVO_PW);
 			//set_servo_PWM(); // if new data, adjust servo PWM for compass & ranger
 		}
 		/*if (new_range) // enough overflow for a new range
@@ -154,8 +154,8 @@ void main(void)
 			//printf("MOTOR_PW: %d\r\n", MOTOR_PW);
 			new_range = 0;
 		}*/
-		PCA0CPL0 = 0xFFFF - SERVO_PW;
-		PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for rudder fan
+		//PCA0CPL0 = 0xFFFF - SERVO_PW;
+		//PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for rudder fan
 		/*PCA0CPL1 = 0xFFFF - MOTOR_PW;
 		PCA0CPH1 = (0xFFFF - MOTOR_PW) >> 8;//Set servo pw for thrust angle
 		PCA0CPL2 = 0xFFFF - SERVO_PW;
@@ -310,7 +310,7 @@ unsigned char read_AD_input(unsigned char pin_number)
 	//printf("Heading %d \r\n",heading);
 	return heading;            // the heading returned in degrees between 0 and 3599
 }
-
+/*
 int read_ranger(void)
 {
 	i2c_read_data(addr,1,Data,3);
@@ -342,16 +342,17 @@ void pick_range(void)
 	lcd_clear();
 	lcd_print("Enter a Kpr value (1 - 50) into the keypad:");
 	gain_speed = kpd_input(1);
-}
+}*/
 //Set steering via tail fan
 void set_tail_PWM(void)
 
 {
+	int PW=0;
 	int kp=12;
 	int kd=70;
 	int error=0;
 	int TailPWM=0;
-	desired_heading = 135;
+	desired_heading = 1350;
 	error = desired_heading - heading;
 
 	if (error > 1800 )
@@ -361,17 +362,29 @@ void set_tail_PWM(void)
 
 	TailPWM = (signed long)PW_NEUT+(signed long)kp*(signed long)error+
 	(signed long)kd*(signed long)(error-previous_error);
+	//printf("TailPWM: %d \r\n", TailPWM);
+	SERVO_PW=TailPWM;
 
-	printf("Tail PWM: %d \r\n",TailPWM);
+	//printf("Tail PWM: %d \r\n",TailPWM);
 
 	previous_error=error;
-	if (TailPW>PW_MAX) 
-		TailPW=PW_MAX;
-	if (TailPW<PW_MIN)
-		TailPW=PW_MIN;
-	SERVO_PW=TailPWM;
-}
+	if (TailPWM>PW_MAX) 
+		SERVO_PW=PW_MAX;
+	if (TailPWM<PW_MIN)
+		SERVO_PW=PW_MIN;
+	//SERVO_PW=TailPWM;
 
+	//printf("AdjustedPWM %d \r\n",TailPWM);
+	//if (!(Counts % 20))
+	
+	if(heading == 0 || heading==450 || heading==900 || heading == 1350 ||
+	heading == 1800 || heading == 2250 || heading == 2700 || heading ==3150)
+	{
+		printf("Heading: %d,TailPWM: %d,CorrectedPW: %d,Error: %d \r\n",heading/10,TailPWM,SERVO_PW,error);
+	}
+	//}
+}
+/*
 void set_servo_PWM(void)
 {
 	int error=0;
@@ -425,6 +438,7 @@ void reverse_mode()
 	//printf("CAR IS IN REVERSE MODE:");
 	//printf("SERVO PW: %d\r\n", SERVO_PW);
 }
+*/
 void print()
 {
 	if (!(Counts % 20))
