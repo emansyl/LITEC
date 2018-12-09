@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /*
 Names: Christian Lopez, Samuel Burnham and Emmanuel Sylvester
 Section: 1 Side: A
@@ -549,5 +547,3 @@ void SetMaxMin()
 	PCA0CPL0 = 0xFFFF - SERVO_PW;
 	PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
 }
-
->>>>>>> d0b55bd677f4285c269272bc57e8824edd59182c
