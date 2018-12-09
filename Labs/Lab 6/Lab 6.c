@@ -310,20 +310,18 @@ unsigned char read_AD_input(unsigned char pin_number)
 	//printf("Heading %d \r\n",heading);
 	return heading;            // the heading returned in degrees between 0 and 3599
 }
-/*
-int read_ranger(void)
-{
-	i2c_read_data(addr,1,Data,3);
-	range = (((unsigned int)Data[1] << 8) | Data[2]);
-	//Read light value
-	light = Data[0];
-	Data[0] = 0x51; //start ping
-	i2c_write_data(addr,0,Data,1);
-	//printf("Distance frpm ranger: %d \r\n",range);
-	//printf("Light: %d\r\n", light);
-	return range;
-}
 
+unsigned int Read_Ranger(void)
+{
+    unsigned int range;
+
+    i2c_read_data(0xE0, 2, Data, 2);
+    range = (Data[0] << 8) + Data[1];
+    Data[0] = 0x51;
+    i2c_write_data(0xE0, 0, Data, 1);   // ping for next read range
+    return range;
+}
+/*
 void pick_heading(void)
 {
 	lcd_clear();
@@ -447,3 +445,106 @@ void print()
 		lcd_print("H: %d, D: %d", heading, range);
 	}
 }
+
+//Function to use ranger to adjust the thruster fan angle
+//holding a fixed range value for ~5 seconds locks in the corresponding angle.
+void Set_Angle(void)
+{
+    char set_angle, count;
+    unsigned int adj, previous_adj, angle;
+
+    count = 0;
+    previous_adj = 0;
+    set_angle = 1;
+
+    while(set_angle)
+    {
+        while(!new_range);                          //new_range is global 80ms flag
+		new_range = 0;
+        adj = Read_Ranger();
+        angle = 2765 + (adj - 40)*10;               //May change: 40 nominal height
+                    	                             //            10 gain on rotation
+        if (angle < PWMIN) angle = PWMIN;
+        else if (angle > PWMAX) angle = PWMAX;
+        PCA0CP1 = 0xFFFF - angle;                   //CEX1 is thrust fan servo
+
+        if(abs(previous_adj - adj) < 8) count++;    //Adjust depending on how noisy data is
+	else count = 0;
+        if(count > 62) set_angle = 0;               //Assuming ranger reads every 80ms
+	previous_adj = adj;                         //
+	printf("\r Range = %u   ", adj);
+    }
+}
+
+void SetMaxMin()
+{	
+	char input;
+	printf("Set the Max pulsewidth\r\n");
+	while(1)
+	{
+		
+		
+		printf("Press r to increase pulsewidth\r\n");
+
+		input = getchar();
+		if (input =='r')
+		{
+			SERVO_PW = SERVO_PW + 10; //increase the steering pulsewidth by 10
+			printf("SERVO_PW: %u\n", SERVO_PW);
+			PCA0CPL0 = 0xFFFF - SERVO_PW;
+			PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;	
+		}
+
+		else if(input == 'l') //if 'l' is pressed by the user
+		{
+			SERVO_PW = SERVO_PW - 10; //decrease the steering pulsewidth by 10
+			printf("SERVO_PW: %u\n", SERVO_PW);
+			PCA0CPL0 = 0xFFFF - SERVO_PW;
+			PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
+		}
+
+		else if(input == ' ')
+		{
+			PW_RIGHT=SERVO_PW;
+			printf("%u is the maximum pulsewidth\r\n",PW_RIGHT );
+			break;
+		}
+	
+	}
+
+	printf("Set the Min pulsewidth\r\n");
+	while(1)
+		
+	{
+		
+		printf("Press l to decrease pulsewidth\r\n");
+
+		input = getchar();
+		if (input =='l')
+		{
+			SERVO_PW = SERVO_PW - 10; //increase the steering pulsewidth by 10	
+			printf("SERVO_PW: %u\n", SERVO_PW);
+			PCA0CPL0 = 0xFFFF - SERVO_PW;
+			PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
+		}
+
+		else if(input == 'r') //if 'l' is pressed by the user
+		{
+			SERVO_PW = SERVO_PW + 10; //decrease the steering pulsewidth by 10
+			printf("SERVO_PW: %u\n", SERVO_PW);
+			PCA0CPL0 = 0xFFFF - SERVO_PW;
+			PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
+		}
+
+		else if(input == ' ')
+		{
+			PW_LEFT=SERVO_PW;
+			printf("%u is the minimum pulsewidth\r\n",PW_LEFT );
+			break;
+		}
+	}
+	printf("SERVO_PW: %u\n", SERVO_PW);
+	PCA0CPL0 = 0xFFFF - SERVO_PW;
+	PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
+}
+
