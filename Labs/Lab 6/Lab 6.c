@@ -44,10 +44,9 @@ void reverse_mode(void); // new feature - adjust steering/speed control for reve
 void print(void);
 void set_tail_PWM(void);
 //define global variables
-unsigned int PW_Init; //Initial pulsewidth set by pot value, add tp PW_NEUT for forward speed
 unsigned int MOTOR_PW;
 
-unsigned int SERVO_PW = 0; //Servo from Lab 3-3
+unsigned int Tail_PW = 0; //Motor PW for the Tail Motor 
 
 //unsigned int PCA_start = 28614;
 unsigned char new_heading = 0; // flag for count of compass timing
@@ -59,22 +58,13 @@ unsigned int desired_heading; //Compass direction, set at start
 
 unsigned int range;
 unsigned int desired_range; //Distance threshold, set at start
-unsigned char AD; //Pot value converted from analog to digital
-unsigned char light = 0;
-//unsigned int brightness_threshold = 200; //Ballpark, based on average light value of a cell phone
-unsigned char addr = 0xE0; //Address of 
-unsigned char Data[3]; //Data array read and written on for SMBus
-int compass_adj = 0; // correction value from compass
-int range_adj = 0; // correction value from ranger
 unsigned char r_count; // overflow count for range
 unsigned char h_count; // overflow count for heading
 unsigned char print_count; // overflow count for printing
 unsigned int Counts; //normal counter for time
 unsigned int gain_heading; //kps, controls how fast the car turns
 unsigned int gain_speed; //kpr, controls how fast the car slows down
-unsigned char reverse; //Boolean to determine if car is in reverse, used to flip steering
 unsigned char run_stop; //Boolean to allow one data initialization
-
 int previous_error = 0;
 
 __sbit __at 0xB7 RUN;
@@ -97,8 +87,8 @@ void main(void)
 	h_count = 0;
 	MOTOR_PW = PW_NEUT;
 	//Code to set the servo motor in neutral for one second
-	PCA0CPL0 = 0xFFFF - MOTOR_PW;
-	PCA0CPH0 = (0xFFFF - MOTOR_PW) >> 8;
+	PCA0CPL2 = 0xFFFF - Tail_PW;
+	PCA0CPH2 = (0xFFFF - Tail_PW) >> 8;
 	Counts = 0;
 	//Wait 1 second
 	while (Counts < 50);
@@ -108,9 +98,7 @@ void main(void)
 		run_stop = 0;
 		while (!RUN)
 		{ 
-		//Continuously read A/D value to set forward speed until switch is in run position
-			//AD = read_AD_input(6);
-			//PW_Init = AD*2.89;
+	
 			if (!run_stop)
 			{
 				//pick_range();
@@ -127,40 +115,22 @@ void main(void)
 			heading = read_compass();
 			new_heading = 0;
 			set_tail_PWM();
-			//printf("Heading: %d,Motor PW: %d \r\n",heading,SERVO_PW);
+			//printf("Heading: %d,Motor PW: %d \r\n",heading,Tail_PW);
 			//set_servo_PWM(); // if new data, adjust servo PWM for compass & ranger
 		}
 		/*if (new_range) // enough overflow for a new range
 		{
 			range = read_ranger(); // get range, also stores light value into light
 			// read_ranger() must start a new ping after a read
-			if (light > brightness_threshold) // if bright light is detected
-			{
-				reverse = 1;
-				//printf("REVERSE");
-				reverse_mode(); // adjust steering control variables for reverse mode
-				// and drive PWM for reverse direction
-			}
-			else
-			{
-				reverse = 0;
-				forward_mode(); // adjust steering control variables for forward mode
-												// and drive PWM for forward direction
-				if (range < desired_range) // if an obstacle is detected
-				{
-					set_speed_adj(); //adjust drive PWM for obstacle
-				}
-			}
-			//printf("MOTOR_PW: %d\r\n", MOTOR_PW);
 			new_range = 0;
 		}*/
-		PCA0CPL0 = 0xFFFF - SERVO_PW;
-		PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for rudder fan
+		PCA0CPL0 = 0xFFFF - TAIL_PW;
+		PCA0CPH0 = (0xFFFF - TAIL_PW) >> 8;//Set motor pw for rudder fan
 		/*
 		PCA0CPL1 = 0xFFFF - MOTOR_PW;
 		PCA0CPH1 = (0xFFFF - MOTOR_PW) >> 8;//Set servo pw for thrust angle
-		PCA0CPL2 = 0xFFFF - SERVO_PW;
-		PCA0CPH2 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for left thrsut power fan
+		PCA0CPL2 = 0xFFFF - Tail_PW;
+		PCA0CPH2 = (0xFFFF - Tail_PW) >> 8;//Set motor pw for left thrsut power fan
 		PCA0CPL3 = 0xFFFF - MOTOR_PW;
 		PCA0CPH3 = (0xFFFF - MOTOR_PW) >> 8;//Set motor pw for right thrust power fan
 		*/
@@ -178,14 +148,6 @@ void Port_Init()
 	//Set output pin for both CEX0,CEX1,CEX2 and CEX3
 	P1MDOUT |= 0xF0; //set output pin (Pin 4,5,6,7) for CEX0-CEX3 in push-pull mode
 
-	//P3MDOUT &= ~0x80;	//Set pin 3.5 I/O for SS
-	//P3 |= 0x80;
-
-	
-	 //Analog input & output
-	//P1MDIN &= ~0x40; //Set pin 6 of Port 1 for analog input
-	//P1MDOUT &= ~0x40; //Set pin 6 of Port 1 as "open drain"
-	//P1 |= 0x40; //Send logic 1 to pin 6 of Port 1
 }
 //-----------------------------------------------------------------------------
 // Interrupt_Init
@@ -315,7 +277,7 @@ unsigned char read_AD_input(unsigned char pin_number)
 unsigned int Read_Ranger(void)
 {
     unsigned int range;
-
+    unsigned int Data[2]
     i2c_read_data(0xE0, 2, Data, 2);
     range = (Data[0] << 8) + Data[1];
     Data[0] = 0x51;
@@ -362,16 +324,16 @@ void set_tail_PWM(void)
 	TailPWM = (signed long)PW_NEUT+(signed long)kp*(signed long)error+
 	(signed long)kd*(signed long)(error-previous_error);
 	//printf("TailPWM: %d \r\n", TailPWM);
-	SERVO_PW=TailPWM;
+	Tail_PW=TailPWM;
 
 	//printf("Tail PWM: %d \r\n",TailPWM);
 
 	previous_error=error;
 	if (TailPWM>PW_MAX) 
-		SERVO_PW=PW_MAX;
+		Tail_PW=PW_MAX;
 	if (TailPWM<PW_MIN)
-		SERVO_PW=PW_MIN;
-	//SERVO_PW=TailPWM;
+		Tail_PW=PW_MIN;
+	//Tail_PW=TailPWM;
 
 	//printf("AdjustedPWM %d \r\n",TailPWM);
 	//if (!(Counts % 20))
@@ -379,7 +341,7 @@ void set_tail_PWM(void)
 	if(heading == 0 || heading==450 || heading==900 || heading == 1350 ||
 	heading == 1800 || heading == 2250 || heading == 2700 || heading ==3150)
 	{
-		printf("Heading: %d,TailPWM: %d,CorrectedPW: %d,Error: %d \r\n",heading/10,TailPWM,SERVO_PW,error);
+		printf("Heading: %d,TailPWM: %d,CorrectedPW: %d,Error: %d \r\n",heading/10,TailPWM,Tail_PW,error);
 	}
 	//}
 }
@@ -409,34 +371,6 @@ void set_servo_PWM(void)
 	//printf("SERVO_PW: %u\n", SERVO_PW);
 }
 //Set error
-
-void forward_mode()
-{
-	//Continuously read the A/D value of Port 1, Pin 6
-	//Calculated slope so that speed increases linearly from AD = 0 to AD = 255
-	MOTOR_PW = PW_Init+PW_NEUT;
-	//printf("Forward speed: %d\r\n", MOTOR_PW);
-	//Need to adjust steering variables, call steering keypad input
-	// function?
-}
-//Linearly slow down the car from distance = 60 to distance = 30
-//Equation: y = k(x-30) + PW_NEUT
-//
-void set_speed_adj()
-{
-	//printf("Obstacle detected: Distance = %d\r\n", range);
-	if (range > desired_range/2)
-		MOTOR_PW = PW_NEUT-gain_speed*(desired_range-range)+PW_Init;
-	else if (range <= desired_range/2)
-		MOTOR_PW = PW_NEUT;
-	//set_steering();
-}
-void reverse_mode()
-{
-	MOTOR_PW = PW_MIN; // will make car go in reverse
-	//printf("CAR IS IN REVERSE MODE:");
-	//printf("SERVO PW: %d\r\n", SERVO_PW);
-}
 */
 void print()
 {
@@ -446,7 +380,7 @@ void print()
 		lcd_print("H: %d, D: %d", heading, range);
 	}
 }
-/*
+
 //Function to use ranger to adjust the thruster fan angle
 //holding a fixed range value for ~5 seconds locks in the corresponding angle.
 void Set_Angle(void)
@@ -549,4 +483,3 @@ void SetMaxMin()
 	PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
 }
 
-*/
