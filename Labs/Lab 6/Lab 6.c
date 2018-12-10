@@ -34,7 +34,6 @@ void Interrupt_Init(void);
 void PCA_ISR(void) __interrupt 9;
 int read_compass(void);
 void set_servo_PWM(void);
-unsigned char read_AD_input(unsigned char pin_number);
 int read_ranger(void); // new feature - read value, and then start a new ping
 void pick_heading(void); // function which allow operator to pick desired heading
 void pick_range(void);
@@ -43,6 +42,7 @@ void set_speed_adj(void);
 void reverse_mode(void); // new feature - adjust steering/speed control for reverse mode
 void print(void);
 void set_tail_PWM(void);
+unsigned char random(void);
 //define global variables
 unsigned int MOTOR_PW;
 
@@ -54,7 +54,7 @@ unsigned char new_range = 0; // flag for count of ranger timing
 unsigned char print_flag = 0; // flag for count of printing
 
 unsigned int heading;
-unsigned int desired_heading; //Compass direction, set at start 
+unsigned int desired_heading = 1200; //Compass direction 
 
 unsigned int range;
 unsigned int desired_range; //Distance threshold, set at start
@@ -313,9 +313,12 @@ void set_tail_PWM(void)
 	int kd=100;
 	int error=0;
 	int TailPWM=0;
-	unsigned int headings[4];
-	headings=[0,500,1200,2500]
-	desired_heading = 1200;
+	unsigned int headings[4] = {0,500,1200,2500};
+	if (!(Counts % 150))
+	{
+		unsigned int index = random();
+		desired_heading = headings[index];
+	}
 	error = desired_heading - heading;
 
 	if (error > 1800 )
@@ -485,3 +488,12 @@ void SetMaxMin()
 	PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
 }
 
+/*return a random integer number between 0 and 3*/
+unsigned char random(void)
+{
+	srand(0);
+  	return (rand() % 4);	// rand returns a random number between 0 and 32767.
+                    	// the mod operation (%) returns the remainder of 
+                      // dividing this value by 5 and returns the result,
+                      // a value of either 0, 1, 2, or 3.
+}
