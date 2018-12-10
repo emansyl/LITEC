@@ -97,8 +97,8 @@ void main(void)
 	h_count = 0;
 	MOTOR_PW = PW_NEUT;
 	//Code to set the servo motor in neutral for one second
-	PCA0CPL2 = 0xFFFF - MOTOR_PW;
-	PCA0CPH2 = (0xFFFF - MOTOR_PW) >> 8;
+	PCA0CPL0 = 0xFFFF - MOTOR_PW;
+	PCA0CPH0 = (0xFFFF - MOTOR_PW) >> 8;
 	Counts = 0;
 	//Wait 1 second
 	while (Counts < 50);
@@ -154,9 +154,10 @@ void main(void)
 			//printf("MOTOR_PW: %d\r\n", MOTOR_PW);
 			new_range = 0;
 		}*/
-		//PCA0CPL0 = 0xFFFF - SERVO_PW;
-		//PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for rudder fan
-		/*PCA0CPL1 = 0xFFFF - MOTOR_PW;
+		PCA0CPL0 = 0xFFFF - SERVO_PW;
+		PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for rudder fan
+		/*
+		PCA0CPL1 = 0xFFFF - MOTOR_PW;
 		PCA0CPH1 = (0xFFFF - MOTOR_PW) >> 8;//Set servo pw for thrust angle
 		PCA0CPL2 = 0xFFFF - SERVO_PW;
 		PCA0CPH2 = (0xFFFF - SERVO_PW) >> 8;//Set motor pw for left thrsut power fan
@@ -346,11 +347,11 @@ void set_tail_PWM(void)
 
 {
 	int PW=0;
-	int kp=12;
-	int kd=70;
+	int kp=5;
+	int kd=100;
 	int error=0;
 	int TailPWM=0;
-	desired_heading = 1350;
+	desired_heading = 1200;
 	error = desired_heading - heading;
 
 	if (error > 1800 )
@@ -445,7 +446,7 @@ void print()
 		lcd_print("H: %d, D: %d", heading, range);
 	}
 }
-
+/*
 //Function to use ranger to adjust the thruster fan angle
 //holding a fixed range value for ~5 seconds locks in the corresponding angle.
 void Set_Angle(void)
@@ -547,3 +548,5 @@ void SetMaxMin()
 	PCA0CPL0 = 0xFFFF - SERVO_PW;
 	PCA0CPH0 = (0xFFFF - SERVO_PW) >> 8;
 }
+
+*/
