@@ -313,6 +313,8 @@ void set_tail_PWM(void)
 	int kd=100;
 	int error=0;
 	int TailPWM=0;
+	unsigned int headings[4];
+	headings=[0,500,1200,2500]
 	desired_heading = 1200;
 	error = desired_heading - heading;
 
