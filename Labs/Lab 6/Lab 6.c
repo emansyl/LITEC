@@ -93,22 +93,14 @@ void main(void)
 	//Wait 1 second
 	while (Counts < 50);
 	//srand(1) is implicitly used since srand() is not called
+	run_stop = 0;
 	while (1)
 	{
-		run_stop = 0;
-		while (!RUN)
-		{ 
-	
-			if (!run_stop)
-			{
-				//pick_range();
-				//pick_heading();
-				lcd_clear();
-				lcd_print("Desired range: %d, Kpr: %d, Desired heading: %d, Kps: %d\r\n",
-				 desired_range, gain_speed, desired_heading, gain_heading);
-				run_stop = 1;
-			}
- 		}
+		if (!run_stop) //No point in doing this, just do outside while(1) loop
+		{
+			//Initial setter code
+			run_stop = 1;
+		}
 		if (new_heading) // enough overflows for a new heading
 		{
 			//printf("compass \r\n");
