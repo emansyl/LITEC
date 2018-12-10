@@ -93,14 +93,9 @@ void main(void)
 	//Wait 1 second
 	while (Counts < 50);
 	//srand(1) is implicitly used since srand() is not called
-	run_stop = 0;
+	//Initial setter code/function calls
 	while (1)
 	{
-		if (!run_stop) //No point in doing this, just do outside while(1) loop
-		{
-			//Initial setter code
-			run_stop = 1;
-		}
 		if (new_heading) // enough overflows for a new heading
 		{
 			//printf("compass \r\n");
