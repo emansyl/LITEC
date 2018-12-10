@@ -92,7 +92,7 @@ void main(void)
 	Counts = 0;
 	//Wait 1 second
 	while (Counts < 50);
-	//printf("First, rotate potentiometer to set forward speed:\r\n");
+	//srand(1) is implicitly used since srand() is not called
 	while (1)
 	{
 		run_stop = 0;
@@ -491,9 +491,8 @@ void SetMaxMin()
 /*return a random integer number between 0 and 3*/
 unsigned char random(void)
 {
-	srand(0);
-  	return (rand() % 4);	// rand returns a random number between 0 and 32767.
-                    	// the mod operation (%) returns the remainder of 
-                      // dividing this value by 5 and returns the result,
-                      // a value of either 0, 1, 2, or 3.
+  return (rand() % 4);	// rand returns a random number between 0 and 32767.
+                    		// the mod operation (%) returns the remainder of 
+                      	// dividing this value by 5 and returns the result,
+                      	// a value of either 0, 1, 2, or 3.
 }
